@@ -36,13 +36,13 @@
         abbr: "i",
         metavar: "INPUT",
         required: true,
-        help: 'Input is read from this, if -f is specified this is a file'
+        help: 'Input is read from this. default: socket, if -f is specified this is a file'
       },
       output: {
         abbr: "o",
         metavar: "OUTPUT",
         required: true,
-        help: 'output is written to this, if -f is given this is a file'
+        help: 'output is written to this. default: socket, if -f is given this is a file'
       },
       debug: {
          abbr: 'd',
@@ -59,15 +59,36 @@
         mev.init();
       }
       // Setup input / output
-      var si;
       if (opts.file) {
         // Input and output as file 
         flags = {
           debug: opts.debug,
           file: true
           }, initMev(opts.input, opts.output, flags);
+      } else {
+        // Open input / output either beeing unix or tcp socket
+        var si = net.createServer()
+        // Input socket
+        if (parseFloat(opts.input)) {
+          si.listen(parseFloat(opts.input), 'localhost', function() {
+            flags = {
+              debug: opts.debug,
+              file: false
+            }, initMev(opts.input, opts.output, flags);
+          });
+        } else {
+          try {
+            si.listen(opts.input, function() {
+              flags = {
+                debug: opts.debug,
+                file: false
+              }, initMev(opts.input, opts.output, flags);
+            });
+          } catch (err) {
+            console.log('Path to unix input socket is invalid');
+          }
+        }
       }
-      
     })
     .help('run a reverse DNS NS authority resolution');
   nomnom.parse();
@@ -80,7 +101,7 @@
     
 
     // Setup input / output
-    var si;
+    
     if (nomnom.file) {
       // Input and output as file 
       flags = {
