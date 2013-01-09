@@ -1,6 +1,6 @@
 { "name": "mev",
   "description": "Evented network measurements build on node",
-  "version": "0.4.0",
+  "version": "0.8.0",
   "author": "Philipp Fehre <philipp.fehre@googlemail.com> (http://sideshowcoder.com)",
   "contributors" : [ "Dirk Haage <dirk@haage.info> (http://dirk.haage.info/)" ],
   "homepage" : "http://measr.net/",
@@ -14,7 +14,6 @@
   "scripts": { "test": "expresso" },
   "devDependencies": { "expresso": "*",
                        "should": "*" },
-  "dependencies":  {  "nomnom": "*",
-                      "nodrrr": "*" },
-  "engines": { "node": "0.3 || 0.4" }
+  "dependencies":  {  "nomnom": "*" },
+  "engines": { "node": "0.8" }
 }

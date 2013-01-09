@@ -9,7 +9,6 @@
  */
 
 var mev = require(__dirname + '/mev'),
-	  dnsext = require(__dirname + '/dnsext'),
 		EventEmitter = require('events').EventEmitter,
 		sys = require('sys');
 
@@ -19,11 +18,6 @@ function RDNS(id, timeout) {
 	    _timeout;
 	    
   that.id = id;
-	that.channels = {};
-  that.channels.main = dnsext.initChannelWithNs();
-	// Default timeout is 5 sek
-	(timeout) ? _timeout = timeout : _timeout = 5000;
-	
 	
 	// reverse name for given IP address
 	that.arpafy = function(ip) {
