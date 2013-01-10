@@ -12,6 +12,7 @@
 var mev = require(__dirname + '/mev'),
     EventEmitter = require('events').EventEmitter,
     dns = require("native-dns"),
+    net = require("net"),
     sys = require('sys');
 
 var NSCache = {};
@@ -66,29 +67,25 @@ function RDNS(id, timeout) {
     // Create correct request
     if(data.nsl && !data.reqnsl){
       iplength = data.ip.split('.').length
-      if (data.ip === "in-addr.arpa") {
+      // 2: in-addr.arpa, 3-5: authority NS, 6: PTR
+      if (iplength < 2) {
         d = {
-          ip: data.ip,
+          ip: "in-addr.arpa",
           cns: data.cns,
           nsl: data.nsl,
           reqnsl: true,
           ptr: false
-        }
+        }        
         that.emit('request', d)
-      } else if (iplength < 2) { // stop for full ipv4s (4) or earlier
+      } else if (iplength < 5) { // stop for full ipv4s (6) or earlier
         // Generate request for the next 256 subnets
         for(var i = 0; i<256; i++){
-          if (iplength == 0) {
-            nextip = i;
-          } else {
-            nextip = data.ip + '.' + i
-          }
           d = {
-            ip: nextip,
+            ip: i + "." + data.ip,
             cns: data.cns,
             nsl: data.nsl,
-            reqnsl: true,
-            ptr: (iplength == 3) // ptr for last round only
+            reqnsl: (iplength < 5), // NS for all rounds but last
+            ptr: (iplength == 5) // ptr for last round only
           }
           that.emit('request', d)
         }
@@ -98,67 +95,63 @@ function RDNS(id, timeout) {
 
   // Run a given Request
   that.runReq = function(req){
-    var nextreq,
-        channel,
-        td,
-        nextns,
-        passResult;
+    var passResult;
 
-    var question = dns.Question({
-      name: (req.ip == "in-addr.arpa") ? req.ip : that.arpafy(req.ip),
-      type: (req.ptr) ? 'PTR' : 'NS'
-    });
-
-    var request = dns.Request({
-      question: question,
-      server: { address: req.cns, port: 53, type: 'udp'},
-      timeout: 1000
-    });
-    console.log(question);
-    request.on('timeout', function () {
-      console.log('Timeout in making request');
-      // Construct the next request to be emitted if the current does not return
-      // it is run against the next nameserver in the list if availible
-      try {
-        nextns = req.nsl[1];
-        if(nextns) {
-          nextreq = {
-            ip: req.ip,
-            cns: nextns,
-            nsl: req.nsl.slice(1),
-            reqnsl: req.reqnsl,
-            ptr: req.ptr,
+    var sendRequest = function(req,ns){
+      var question = dns.Question({
+        name: req.ip,
+        type: (req.ptr) ? 'PTR' : 'NS'
+      });
+//      console.log(question);
+      var request = dns.Request({
+        question: question,
+        server: { address: ns, port: 53, type: 'udp'},
+        timeout: 1000
+      });
+      request.on('timeout', function () {
+        // Construct the next request to be emitted if the current does not return
+        // it is run against the next nameserver in the list if availible
+        try {
+          var nextns = req.nsl[1];
+          if(nextns) {
+            var nextreq = {
+              ip: req.ip,
+              cns: nextns,
+              nsl: req.nsl.slice(1),
+              reqnsl: req.reqnsl,
+              ptr: req.ptr,
+            }
+            that.emit('request', nextreq);
+            //console.log('Timeout in making request, trying next server in list');
           }
-          that.emit('request', nextreq);
+        } catch(err) {
+          // No next request can be constructed... done here
+          //console.log('Timeout in making request, and no more servers available');
         }
-      } catch(err) {
-        // No next request can be constructed... done here
-      }
-    });
-    request.on('message', function (err, answer) {
-      that.emit('result', { req: req, res: answer });
-    });
-    request.send();
-
-/*
-    if(typeof(that.channels[req.cns]) === 'undefined') {
-      // The nameserver is not present yet
-      if(req.reqnsl ) {
-        // A nameserver list is to be requested
-        dolookup(that.channels.main);
+      });
+      request.on('message', function (err, answer) {
+        that.emit('result', { req: req, res: answer });
+      });
+      request.send();
+    };
+    if (net.isIP(req.cns)) {
+      sendRequest(req, req.cns);
+    } else {
+      if (NSCache[req.cns]) {
+        sendRequest(req, NSCache[req.cns]);
       } else {
-        // The nameserver needs to be looked up afterwards the request is run
-        dnsext.getHostByName(that.channels.main, req.cns, function(err, domains){
-          if(!err) {
-            req.cns = domains[0];
-            that.channels[domains[0]] = dnsext.initChannelWithNs(domains[0]);
-            dolookup(that.channels[domains[0]]);
+        dns.resolve4(req.cns, function(err, addresses) {
+          if (err) {
+            console.log(err);
+            //throw err;
+          } else {
+            //console.log(addresses);
+            NSCache[req.cns] = addresses[0];
+            sendRequest(req, NSCache[req.cns]);
           }
         });
       }
-    } else {
-      dolookup(that.channels[req.cns]);
-    }*/
+    }
   };
 
   // Handle the result returned form a request
@@ -178,14 +171,14 @@ function RDNS(id, timeout) {
         if (a.data && a.name === req.ip) {
           nsl.push(a.data.trim().toLowerCase());
         } else {
-          console.log("got bullshit: " + JSON.stringify(a));
+          //console.log("got bullshit: " + JSON.stringify(a));
         }
       });
       res.authority.forEach(function (a) {
         if (a.data && a.name === req.ip) {
           nsl.push(a.data.trim().toLowerCase());
         } else {
-          console.log("got bullshit: " + JSON.stringify(a));
+          //console.log("got bullshit: " + JSON.stringify(a));
         }
       });
       // log result
@@ -194,8 +187,8 @@ function RDNS(id, timeout) {
       if (nsl.length > 0) {
         data = {
           ip: req.ip,
-          cns: res[0],
-          nsl: res,
+          cns: nsl[0],
+          nsl: nsl,
           reqnsl: false,
           ptr: false
         }

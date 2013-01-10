@@ -51,7 +51,6 @@
       }
     })
     .callback(function(opts){
-      console.log(opts);
       // Setup and start mev
       function initMev(ind, outd, flags) {
         var module = new Rdns('rdns'),
@@ -63,7 +62,8 @@
         // Input and output as file 
         var flags = {
           debug: opts.debug,
-          file: true
+          file: true,
+          timeout: 10000
           };
         initMev(opts.input, opts.output, flags);
       } else {
@@ -74,7 +74,8 @@
           si.listen(parseFloat(opts.input), 'localhost', function() {
             var flags = {
               debug: opts.debug,
-              file: false
+              file: false,
+              timeout: 10000
             };
           initMev(opts.input, opts.output, flags);
           });
@@ -83,7 +84,8 @@
             si.listen(opts.input, function() {
               var flags = {
                 debug: opts.debug,
-                file: false
+                file: false,
+                timeout: 10000
               };
             initMev(opts.input, opts.output, flags);
             });
