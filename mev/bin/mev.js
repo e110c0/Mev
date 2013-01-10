@@ -61,28 +61,31 @@
       // Setup input / output
       if (opts.file) {
         // Input and output as file 
-        flags = {
+        var flags = {
           debug: opts.debug,
           file: true
-          }, initMev(opts.input, opts.output, flags);
+          };
+        initMev(opts.input, opts.output, flags);
       } else {
         // Open input / output either beeing unix or tcp socket
         var si = net.createServer()
         // Input socket
         if (parseFloat(opts.input)) {
           si.listen(parseFloat(opts.input), 'localhost', function() {
-            flags = {
+            var flags = {
               debug: opts.debug,
               file: false
-            }, initMev(opts.input, opts.output, flags);
+            };
+          initMev(opts.input, opts.output, flags);
           });
         } else {
           try {
             si.listen(opts.input, function() {
-              flags = {
+              var flags = {
                 debug: opts.debug,
                 file: false
-              }, initMev(opts.input, opts.output, flags);
+              };
+            initMev(opts.input, opts.output, flags);
             });
           } catch (err) {
             console.log('Path to unix input socket is invalid');
@@ -92,46 +95,5 @@
     })
     .help('run a reverse DNS NS authority resolution');
   nomnom.parse();
-
-
-
-  // Setup and start mev
-  if (nomnom.input && nomnom.output) {
-
-    
-
-    // Setup input / output
-    
-    if (nomnom.file) {
-      // Input and output as file 
-      flags = {
-        debug: nomnom.debug,
-        file: true
-      }, initMev(nomnom.input, nomnom.output, flags);
-    } else {
-      // Open input / output either beeing unix or tcp socket
-      si = net.createServer()
-      // Input socket
-      if (parseFloat(opts.input)) {
-        si.listen(parseFloat(opts.input), 'localhost', function() {
-          flags = {
-            debug: nomnom.debug,
-            file: false
-          }, initMev(nomnom.input, nomnom.output, flags);
-        });
-      } else {
-        try {
-          si.listen(nomnom.input, function() {
-            flags = {
-              debug: nomnom.debug,
-              file: false
-            }, initMev(nomnom.input, nomnom.output, flags);
-          });
-        } catch (err) {
-          console.log('Path to unix input socket is invalid');
-        }
-      }
-    }
-  }
 
 })()

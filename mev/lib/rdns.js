@@ -1,6 +1,7 @@
 /* Reverse DNS measurement module for Mev
  * Author: Philipp Fehre <philipp.fehre@googlemail.com>
- * 
+ * Rewrite for node 0.8 and native-dns by: Dirk Haage <dirk@haage.info>
+ *
  * Provide a way to parallely resolve a massive number of Reverse DNS Requests
  * Uses Redis to Store requests as well as results
  *
@@ -31,20 +32,22 @@ function RDNS(id, timeout) {
 	
 	// read input
 	that.readInput = function(indata){
-		var ip, 
+		var ip,
 		    ns,
 		    data;
-		    
+		var nsl = [];
+
 		indata.split(',').forEach( function(el, idx, ary){
       var e = el.trim();
-      (idx == 0) ? ip = e : ns = e;
+      (idx == 0) ? ip = e : nsl.push(e);
+      
 		});
 		
-		if(!ns) {
+		if(nsl.length === 0) {
 			ns = undefined;
 			nsl = undefined;
 		} else {
-			nsl = [ns];
+			ns = nsl[0];
 		}
 		
 		data = { ip: ip, cns: ns, nsl: nsl };
@@ -53,12 +56,12 @@ function RDNS(id, timeout) {
 	
 	// Generate requests from data 
 	that.genReq = function(data){
-		var reqs = [],
+		/*var reqs = [],
 		    iplength,
 		    d;
-	
+	      */
 		// Create correct request
-		if(data.nsl && !data.reqnsl){
+		/*if(data.nsl && !data.reqnsl){
       iplength = data.ip.split('.').length
 			if(iplength == 4) {
 				d = {
@@ -91,20 +94,20 @@ function RDNS(id, timeout) {
 				ptr: false
 			}
 			that.emit('request', d)
-		}
+		}*/
 	};
 	
 	// Run a given Request
-	that.runReq = function(req){
-		var nextreq,
+	that.runReq = function(req){ 
+		/*var nextreq,
 		    channel,
         td,
         nextns,
         passResult;
-
+        */
     // Construct the next request to be emitted if the current does not return
     // it is run against the next nameserver in the list if availible 
-    try {
+    /*try {
       nextns = req.nsl[1];
       if(nextns) { 
         nextreq = {
@@ -156,12 +159,12 @@ function RDNS(id, timeout) {
 			}
 		} else {
 			dolookup(that.channels[req.cns]);
-		}	 
+		}*/	 
 	};
 	
 	// Handle the result returned form a request
 	that.handleRes = function(res){
-		var req = res.req,
+		/*var req = res.req,
 				res = res.res,
 			  err = res.error,
 			  data;
@@ -178,7 +181,7 @@ function RDNS(id, timeout) {
 			  ptr: false
       }
 			that.emit('data', data);
-		}
+		}*/
 	};
 }
 

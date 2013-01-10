@@ -22,7 +22,6 @@ var sys = require('sys'),
  *        flags.file: input and output are no sockets but files, this is implemented for legacy reasons
  */
 function Mev(mmodule, input, output, flags) {
-	
   var that = this,
       flags = flags || {},
       file = flags.file || false,
@@ -35,7 +34,7 @@ function Mev(mmodule, input, output, flags) {
   
   // shutdown after TIMEOUT inactivity unless timeout is set to 0
   if(timeout !== 0) td = setTimeout(that.stop, timeout);
-    
+  
   that.init = function(){
     logger('starting mev');
 		// Events
@@ -174,7 +173,7 @@ function Mev(mmodule, input, output, flags) {
   // Logging
 	function logger(desc, obj) {
 		if(debug) { 
-			if(typeof(obj) === undefined){
+			if( obj === undefined){
 				console.log(desc);
 			} else {
 				console.log(desc + sys.inspect(obj));
