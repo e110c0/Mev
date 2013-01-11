@@ -155,12 +155,8 @@ function RDNS(id, timeout) {
                   reqnsl: req.reqnsl,
                   ptr: req.ptr,
                 }
-                //console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
                 that.emit('request', nextreq);
               } catch(err) {
-                // No next request can be constructed... done here
-                //console.log(err)
-                //console.log('Timeout in making request for ' + req.ip + ', and no more servers available');
               }
             }
           }
@@ -176,9 +172,15 @@ function RDNS(id, timeout) {
         err = data.error,
         data;
 
-    if(req.ptr && !err && res.answer.length > 0){
-      that.finishRes({result: { key:req.ip, value:res}})
-      console.log(req.ip + ' => ' + res.answer[0].data);
+    if(req.ptr && !err) {
+      //that.finishRes({result: { key:req.ip, value:res}})
+      if (res.answer) {
+        res.answer.forEach(function(a){
+          console.log(req.ip + ' => ' + a.data);
+        });
+      } else {
+        console.log(req.ip + ' => none');
+      }
     }
     if(req.reqnsl && !err){
       // get all authorative nameservers
