@@ -75,7 +75,7 @@
             var flags = {
               debug: opts.debug,
               file: false,
-              timeout: 10000
+              timeout: 20000
             };
           initMev(opts.input, opts.output, flags);
           });

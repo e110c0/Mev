@@ -24,14 +24,10 @@ function RDNS(id, timeout) {
 
   that.id = id;
 
-  // reverse name for given IP address
-  that.arpafy = function(ip) {
-    return ip.split('.').reverse().join('.').concat('.in-addr.arpa');
-  };
 
   // finial
   that.finishRes = function(result){
-    that.emit('done', result['result']);
+    //that.emit('done', result['result']);
   };
 
   // read input
@@ -58,39 +54,40 @@ function RDNS(id, timeout) {
     that.emit('data', data);
   };
 
-  // Generate requests from data
-  that.genReq = function(data){
+  // Generate request round based on last result
+  that.generateNextRound = function(host,nsl){
     var reqs = [],
-        iplength,
-        nextip,
+        namelength = host.split('.').length,
         d;
     // Create correct request
-    if(data.nsl && !data.reqnsl){
-      iplength = data.ip.split('.').length
-      // 2: in-addr.arpa, 3-5: authority NS, 6: PTR
-      if (iplength < 2) {
+    // 2: in-addr.arpa, 3-5: authority NS, 6: PTR
+    if (namelength < 6) { // stop for full ipv4s (6) or earlier
+      // Generate request for the next 256 subnets
+      for(var i = 0; i<256; i++){
+        nsl.sort(function() {return 0.5 - Math.random()})
         d = {
-          ip: "in-addr.arpa",
-          cns: data.cns,
-          nsl: data.nsl,
-          reqnsl: true,
-          ptr: false
-        }        
-        that.emit('request', d)
-      } else if (iplength < 5) { // stop for full ipv4s (6) or earlier
-        // Generate request for the next 256 subnets
-        for(var i = 0; i<256; i++){
-          d = {
-            ip: i + "." + data.ip,
-            cns: data.cns,
-            nsl: data.nsl,
-            reqnsl: (iplength < 5), // NS for all rounds but last
-            ptr: (iplength == 5) // ptr for last round only
-          }
-          that.emit('request', d)
+          ip: i + "." + host,
+          cns: nsl[0],
+          nsl: nsl,
+          reqnsl: (namelength < 5), // NS for all rounds but last
+          ptr: (namelength == 5) // ptr for last round only
         }
+        that.emit('request', d)
       }
     }
+  }
+  // Generate requests from data
+  that.genReq = function(data){
+    var iplength = data.ip.split('.').length
+    // 2: in-addr.arpa, 3-5: authority NS, 6: PTR
+    var d = {
+      ip: data.ip,
+      cns: data.cns,
+      nsl: data.nsl,
+      reqnsl: (iplength < 6), // NS for all rounds but last
+      ptr: (iplength == 6) // ptr for last round only
+    }
+    that.emit('request', d)
   };
 
   // Run a given Request
@@ -102,31 +99,29 @@ function RDNS(id, timeout) {
         name: req.ip,
         type: (req.ptr) ? 'PTR' : 'NS'
       });
-//      console.log(question);
+      //console.log(question);
       var request = dns.Request({
         question: question,
         server: { address: ns, port: 53, type: 'udp'},
-        timeout: 1000
+        timeout: 2000
       });
       request.on('timeout', function () {
         // Construct the next request to be emitted if the current does not return
         // it is run against the next nameserver in the list if availible
         try {
-          var nextns = req.nsl[1];
-          if(nextns) {
-            var nextreq = {
-              ip: req.ip,
-              cns: nextns,
-              nsl: req.nsl.slice(1),
-              reqnsl: req.reqnsl,
-              ptr: req.ptr,
-            }
-            that.emit('request', nextreq);
-            //console.log('Timeout in making request, trying next server in list');
+          var nextreq = {
+            ip: req.ip,
+            cns: req.nsl[1],
+            nsl: req.nsl.slice(1),
+            reqnsl: req.reqnsl,
+            ptr: req.ptr,
           }
+          //console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
+          that.emit('request', nextreq);
         } catch(err) {
           // No next request can be constructed... done here
-          //console.log('Timeout in making request, and no more servers available');
+          //console.log(err)
+          //console.log('Timeout in making request for ' + req.ip + ', and no more servers available');
         }
       });
       request.on('message', function (err, answer) {
@@ -142,7 +137,7 @@ function RDNS(id, timeout) {
       } else {
         dns.resolve4(req.cns, function(err, addresses) {
           if (err) {
-            console.log(err);
+            //console.log(err);
             //throw err;
           } else {
             //console.log(addresses);
@@ -161,8 +156,9 @@ function RDNS(id, timeout) {
         err = data.error,
         data;
 
-    if(req.ptr && !err){
+    if(req.ptr && !err && res.answer.length > 0){
       that.finishRes({result: { key:req.ip, value:res}})
+      console.log(req.ip + ' => ' + res.answer[0].data);
     }
     if(req.reqnsl && !err){
       // get all authorative nameservers
@@ -183,17 +179,8 @@ function RDNS(id, timeout) {
       });
       // log result
       console.log(req.ip + ': ' + JSON.stringify(nsl));
-      // create new data
-      if (nsl.length > 0) {
-        data = {
-          ip: req.ip,
-          cns: nsl[0],
-          nsl: nsl,
-          reqnsl: false,
-          ptr: false
-        }
-        that.emit('data', data);
-      }
+      // create new request (not data, data is from input only)
+      if (nsl.length > 0) that.generateNextRound(req.ip,nsl);
     }
   };
 }
