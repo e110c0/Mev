@@ -1,19 +1,30 @@
-{ "name": "mev",
+{
+  "name": "mev",
   "description": "Evented network measurements build on node",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": "Philipp Fehre <philipp.fehre@googlemail.com> (http://sideshowcoder.com)",
-  "contributors" : [ "Dirk Haage <dirk@haage.info> (http://dirk.haage.info/)" ],
-  "homepage" : "http://measr.net/",
+  "contributors": ["Dirk Haage <dirk@haage.info> (http://dirk.haage.info/)"],
+  "homepage": "http://measr.net/",
   "keywords": ["network", "measurments", "istrukta"],
-  "directories" : { "example" : "./example",
-                    "test" : "./test",
-                    "lib" : "./lib",
-                    "bin" : "./bin"
-                  },
+  "directories": {
+    "example": "./example",
+    "test": "./test",
+    "lib": "./lib",
+    "bin": "./bin"
+  },
   "main": "mev",
-  "scripts": { "test": "expresso" },
-  "devDependencies": { "expresso": "*",
-                       "should": "*" },
-  "dependencies":  {  "nomnom": "*" },
-  "engines": { "node": "0.8" }
+  "scripts": {
+    "test": "expresso"
+  },
+  "devDependencies": {
+    "expresso": "*",
+    "should": "*"
+  },
+  "dependencies": {
+    "nomnom": "*",
+    "native-dns": "*"
+  },
+  "engines": {
+    "node": "0.8"
+  }
 }

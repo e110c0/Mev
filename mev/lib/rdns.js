@@ -129,6 +129,7 @@ function RDNS(id, timeout) {
       });
       request.send();
     };
+    
     if (net.isIP(req.cns)) {
       sendRequest(req, req.cns);
     } else {
@@ -141,8 +142,27 @@ function RDNS(id, timeout) {
             //throw err;
           } else {
             //console.log(addresses);
-            NSCache[req.cns] = addresses[0];
-            sendRequest(req, NSCache[req.cns]);
+            if (addresses.length > 0) {
+              NSCache[req.cns] = addresses[0];
+              sendRequest(req, NSCache[req.cns]);              
+            } else {
+              // remove frist NS and create new request
+              try {
+                var nextreq = {
+                  ip: req.ip,
+                  cns: req.nsl[1],
+                  nsl: req.nsl.slice(1),
+                  reqnsl: req.reqnsl,
+                  ptr: req.ptr,
+                }
+                //console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
+                that.emit('request', nextreq);
+              } catch(err) {
+                // No next request can be constructed... done here
+                //console.log(err)
+                //console.log('Timeout in making request for ' + req.ip + ', and no more servers available');
+              }
+            }
           }
         });
       }
