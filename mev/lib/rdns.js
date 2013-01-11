@@ -142,10 +142,11 @@ function RDNS(id, timeout) {
             //throw err;
           } else {
             //console.log(addresses);
-            if (addresses.length > 0) {
+            if (addresses && addresses.length > 0) {
               NSCache[req.cns] = addresses[0];
               sendRequest(req, NSCache[req.cns]);              
             } else {
+              console.log(addresses);
               // remove frist NS and create new request
               try {
                 var nextreq = {
