@@ -105,19 +105,19 @@ function RDNS(id, timeout) {
       request.on('timeout', function () {
         // Construct the next request to be emitted if the current does not return
         // it is run against the next nameserver in the list if availible
-        try {
+        if (req.nsl.length > 1) {
           var nextreq = {
             ip: req.ip,
             cns: req.nsl[1],
             nsl: req.nsl.slice(1),
             type: req.type
           }
-          console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
+          console.log('Timeout in making request for ' + nextreq.ip + ', trying next server ' + nextreq.cns + ' in list: ' + nextreq.nsl);
           that.emit('request', nextreq);
-        } catch(err) {
+        } else {
           // No next request can be constructed... done here
           //console.log(err)
-          //console.log('Timeout in making request for ' + req.ip + ', and no more servers available');
+          console.log('Timeout in making request for ' + req.ip + ', and no more servers available');
         }
       });
       request.on('message', function (err, answer) {
