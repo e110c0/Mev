@@ -24,7 +24,6 @@ function RDNS(id, timeout) {
 
   that.id = id;
 
-
   // finial
   that.finishRes = function(result){
     //that.emit('done', result['result']);
@@ -69,8 +68,7 @@ function RDNS(id, timeout) {
           ip: i + "." + host,
           cns: nsl[0],
           nsl: nsl,
-          reqnsl: (namelength < 5), // NS for all rounds but last
-          ptr: (namelength == 5) // ptr for last round only
+          type: (namelength < 5) ? 'NS' : 'PTR'
         }
         that.emit('request', d)
       }
@@ -78,14 +76,13 @@ function RDNS(id, timeout) {
   }
   // Generate requests from data
   that.genReq = function(data){
-    var iplength = data.ip.split('.').length
+    var namelength = data.ip.split('.').length
     // 2: in-addr.arpa, 3-5: authority NS, 6: PTR
     var d = {
       ip: data.ip,
       cns: data.cns,
       nsl: data.nsl,
-      reqnsl: (iplength < 6), // NS for all rounds but last
-      ptr: (iplength == 6) // ptr for last round only
+      type: (namelength < 6) ? 'NS' : 'PTR'
     }
     that.emit('request', d)
   };
@@ -97,7 +94,7 @@ function RDNS(id, timeout) {
     var sendRequest = function(req,ns){
       var question = dns.Question({
         name: req.ip,
-        type: (req.ptr) ? 'PTR' : 'NS'
+        type: req.type
       });
       //console.log(question);
       var request = dns.Request({
@@ -113,10 +110,9 @@ function RDNS(id, timeout) {
             ip: req.ip,
             cns: req.nsl[1],
             nsl: req.nsl.slice(1),
-            reqnsl: req.reqnsl,
-            ptr: req.ptr,
+            type: req.type
           }
-          //console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
+          console.log('Timeout in making request for ' + req.ip + ', trying next server in list: ' + req.nsl);
           that.emit('request', nextreq);
         } catch(err) {
           // No next request can be constructed... done here
@@ -144,17 +140,16 @@ function RDNS(id, timeout) {
             //console.log(addresses);
             if (addresses && addresses.length > 0) {
               NSCache[req.cns] = addresses[0];
-              sendRequest(req, NSCache[req.cns]);              
+              sendRequest(req, NSCache[req.cns]);
             } else {
-              console.log(addresses);
+              console.log("no result for " + req.cns);
               // remove frist NS and create new request
               try {
                 var nextreq = {
                   ip: req.ip,
                   cns: req.nsl[1],
                   nsl: req.nsl.slice(1),
-                  reqnsl: req.reqnsl,
-                  ptr: req.ptr,
+                  type: req.type
                 }
                 that.emit('request', nextreq);
               } catch(err) {
@@ -173,7 +168,7 @@ function RDNS(id, timeout) {
         err = data.error,
         data;
 
-    if(req.ptr && !err) {
+    if(req.type === "PTR" && !err) {
       //that.finishRes({result: { key:req.ip, value:res}})
       if (res.answer) {
         res.answer.forEach(function(a){
@@ -183,7 +178,7 @@ function RDNS(id, timeout) {
         console.log(req.ip + ' => none');
       }
     }
-    if(req.reqnsl && !err){
+    if(req.type === "NS" && !err){
       // get all authorative nameservers
       var nsl = [];
       res.answer.forEach(function (a) {
